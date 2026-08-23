@@ -15,7 +15,7 @@ if not api_token or not collector_id:
 
 # Define target place and URL
 target_place = "chennai"
-target_url = f"https://vegetablemarketprice.com/market/chennai/today"
+target_url = f"https://veggies-api-test-website.onrender.com/" # <--------- Modifyable Target
 
 # Endpoints and Headers
 trigger_url = f"https://api.brightdata.com/dca/trigger?collector={collector_id}"
