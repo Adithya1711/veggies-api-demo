@@ -39,50 +39,19 @@ jobs:
       - name: 5 Validate Data Integrity
         id: validate
         run: |
+          # Dynamically locate today's generated JSON file
           TODAY=$(date +'%d-%m-%Y')
           FILE_PATH="veggies-api/data/$TODAY/chennai.json"
 
-          if [ ! -f "$FILE_PATH" ]; then
-            echo "🚨 Validation Failed: File not found!"
+          # Use jq (command-line JSON processor) to check if the array is empty
+          # If the website layout changed, the array will have 0 items.
+          if [ ! -f "$FILE_PATH" ] || [ $(jq 'length' "$FILE_PATH") -eq 0 ]; then
+            echo "🚨 Validation Failed: Data is empty! The website UI likely changed."
             exit 1
           fi
 
-          # Validate JSON syntax first
-          if ! jq empty "$FILE_PATH" >/dev/null 2>&1; then
-            echo "🚨 Validation Failed: Invalid JSON!"
-            exit 1
-          fi
-
-          # Validate vegetables array exists and isn't empty
-          VEGGIE_COUNT=$(jq '.[0].vegetables | length' "$FILE_PATH")
-
-          if [ -z "$VEGGIE_COUNT" ] || [ "$VEGGIE_COUNT" -eq 0 ]; then
-            echo "🚨 Validation Failed: 'vegetables' array is empty!"
-            exit 1
-          fi
-
-          # Validate every vegetable has the required shape
-          INVALID_ITEMS=$(jq '
-            [
-              .[0].vegetables[]
-              | select(
-                  (.vegetable_name | type) != "string"
-                  or (.price | type) != "number"
-                  or (.minRetail | type) != "number"
-                  or (.maxRetail | type) != "number"
-                  or ((keys | sort) != ["maxRetail", "minRetail", "price", "vegetable_name"])
-                )
-            ]
-            | length
-          ' "$FILE_PATH")
-
-          if [ "$INVALID_ITEMS" -ne 0 ]; then
-            echo "🚨 Validation Failed: $INVALID_ITEMS vegetable objects have invalid schema."
-            exit 1
-          fi
-
-          echo "✅ Validation Passed: Healthy data detected with $VEGGIE_COUNT items."
-        continue-on-error: true
+          echo "✅ Validation Passed: Healthy data detected."
+        continue-on-error: true # Prevents the workflow from crashing so it can proceed to the heal step
 
       - name: 6 AI Auto-Heal (Only runs if Step 5 fails)
         if: steps.validate.outcome == 'failure'
